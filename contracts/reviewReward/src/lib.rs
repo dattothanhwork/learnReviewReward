@@ -1,7 +1,7 @@
 #![no_std]
 use soroban_sdk::{
     contract, contractimpl, contracttype, contracterror,
-    Address, Env, String, symbol_short, Vec,
+    Address, Env, String, symbol_short, panic_with_error,
 };
 
 const DAY_IN_LEDGERS: u32 = 17280;
@@ -85,10 +85,11 @@ impl ReviewReward {
         admin.require_auth();
         if amount <= 0 { panic_with_error!(&env, ReviewError::InvalidInput); }
 
-        let bal: i128 = env.storage().persistent().get(&DataKey::Balance(reviewer.clone())).unwrap_or(0_i128);
-        env.storage().persistent().set(&DataKey::Balance(reviewer.clone()), &(bal + amount));
-        env.storage().persistent().extend_ttl(&DataKey::Balance(reviewer), PERSISTENT_THRESHOLD, PERSISTENT_TTL);
-        env.events().publish((symbol_short!("reward"), reviewer), amount);
+        let key = DataKey::Balance(reviewer.clone());
+        let bal: i128 = env.storage().persistent().get(&key).unwrap_or(0_i128);
+        env.storage().persistent().set(&key, &(bal + amount));
+        env.storage().persistent().extend_ttl(&key, PERSISTENT_THRESHOLD, PERSISTENT_TTL);
+        env.events().publish((symbol_short!("reward"), reviewer.clone()), amount);
     }
 
     /// Check balance for an address
@@ -104,7 +105,7 @@ impl ReviewReward {
         r.rewarded = true;
         env.storage().persistent().set(&DataKey::Review(id), &r);
         env.storage().persistent().extend_ttl(&DataKey::Review(id), PERSISTENT_THRESHOLD, PERSISTENT_TTL);
-        env.events().publish((symbol_short!("mark_rewarded"),), id);
+        env.events().publish((symbol_short!("mark_rwd"),), id);
     }
 }
 
